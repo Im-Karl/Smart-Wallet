@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = process.env.PORT;
 
+const { startCronJobs } = require('./cron/cronController');
 
 const budgetRoutes = require('./routes/budgetRoutes');
 const authRoutes = require('./routes/authRoutes');
@@ -17,6 +18,7 @@ const connectDB = async () => {
     try {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log("MongoDB connect successfully!");
+        startCronJobs();
     } catch (error) {
         console.log("MongoDB connection errr", error.message);
         process.exit(1);
