@@ -11,8 +11,8 @@ exports.createBudget = async (req,res) => {
     const user_id = req.user_id;
     const {name, start_date, end_date, total_amount} = req.body;
 
-    const startDate = startOfDay(new Date(start_date));
-    const endDate = startOfDay(new Date(end_date));
+    const startDate = new Date(start_date + "T00:00:00");
+    const endDate = new Date(end_date + "T00:00:00");
 
     if(isBefore(endDate, startDate)){
         return res.status(400).json({message: "End date must be after start date"});

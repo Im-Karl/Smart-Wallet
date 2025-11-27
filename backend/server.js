@@ -6,9 +6,11 @@ const PORT = process.env.PORT;
 
 
 const budgetRoutes = require('./routes/budgetRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 app.use(express.json());
 
+app.use('/api/auth', authRoutes); 
 app.use('/api/budgets', budgetRoutes);
 
 const connectDB = async () => {

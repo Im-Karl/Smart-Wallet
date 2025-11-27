@@ -8,8 +8,16 @@ exports.addTransaction = async (req, res) => {
   const { amount, description, category } = req.body;
 
   const today = new Date();
-  const start = startOfDay(today);
-  const end = addDays(start, 1);
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+  const end = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate() + 1
+  );
 
   if (amount === 0) {
     return res
@@ -44,7 +52,7 @@ exports.addTransaction = async (req, res) => {
 
     await updateBudgetSummary(budget_id);
 
-    res.status(201).jsoN({
+    res.status(201).json({
       message: "Transaction added and Daily Record updated.",
       dailyRecord,
     });
@@ -66,14 +74,11 @@ const updateBudgetSummary = async (budget_id) => {
           total_spent: { $sum: "$spent" },
           net_remaining: { $sum: "$remaining" },
           total_saved: {
-            $sum: { $cond: [{ $gt: ["$remainging", 0] }, "$remaining", 0] },
-          },
-          total_saved: {
             $sum: { $cond: [{ $gt: ["$remaining", 0] }, "$remaining", 0] },
           },
           total_over_limit: {
             $sum: {
-              $cond: [{ $gt: ["$remaining", 0] }, { $abs: "$remaining" }, 0],
+              $cond: [{ $lt: ["$remaining", 0] }, { $abs: "$remaining" }, 0],
             },
           },
         },
@@ -85,7 +90,6 @@ const updateBudgetSummary = async (budget_id) => {
     await Budget.findByIdAndUpdate(budget_id, {
       total_spent: summary.total_spent || 0,
       total_saved: summary.total_saved || 0,
-      // total_over_limit ở đây là tổng các phần âm (Bước 3)
       total_over_limit: summary.total_over_limit || 0,
       net_remaining: summary.net_remaining || 0,
     });

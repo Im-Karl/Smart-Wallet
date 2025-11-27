@@ -1,15 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const budgetController = require('../controllers/budgetController');
-const transactionController = require('../controllers/transactionController');
-// const authMiddleware = require('../middleware/authMiddleware'); // Cần cho xác thực
+const { protect } = require('../middleware/authMiddleware');
+const { createBudget } = require('../controllers/budgetController');
+const {addTransaction } = require('../controllers/transactionController');
 
-// router.use(authMiddleware); // Áp dụng xác thực cho tất cả routes
-
-// POST /api/budgets (Bước 4)
-router.post('/', budgetController.createBudget); 
-
-// POST /api/budgets/:budget_id/transactions (Bước 5)
-router.post('/:budget_id/transactions', transactionController.addTransaction);
+router.post('/', protect, createBudget);
+router.post('/:budget_id/transactions', protect, addTransaction);
 
 module.exports = router;
