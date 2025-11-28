@@ -3,13 +3,24 @@ const mongoose = require("mongoose");
 const DailyRecord = require("../models/DailyRecord");
 const { isBefore, differenceInDays, addDays, startOfDay } = require("date-fns");
 
+const toVNDate = (date) => {
+  return new Date(date.getTime() + 7 * 60 * 60 * 1000);
+};
+
+const startOfDayVN = (date) => {
+  const vn = toVNDate(date);
+  return new Date(
+    Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate())
+  );
+};
+
 const calculateTotalDays = (start, end) => {
   return differenceInDays(end, start) + 1;
 };
 
 exports.getBudgets = async (req, res) => {
   const user_id = req.user._id;
-  const today = startOfDay(new Date());
+  const today = startOfDayVN(new Date());
 
   try {
     const budgets = await Budget.aggregate([
@@ -74,7 +85,7 @@ exports.getBudgets = async (req, res) => {
 exports.getDailyRecord = async (req, res) => {
   const { budget_id, date } = req.params;
 
-  const targetDate = startOfDay(new Date(date));
+  const targetDate = startOfDayVN(new Date(date));
 
   try {
     const record = await DailyRecord.findOne({
@@ -105,8 +116,8 @@ exports.createBudget = async (req, res) => {
   const user_id = req.user._id;
   const { name, start_date, end_date, total_amount } = req.body;
 
-  const startDate = new Date(start_date + "T00:00:00");
-  const endDate = new Date(end_date + "T00:00:00");
+  const startDate = startOfDayVN(new Date(start_date));
+  const endDate = startOfDayVN(new Date(end_date));
 
   if (isBefore(endDate, startDate)) {
     return res
@@ -136,7 +147,7 @@ exports.createBudget = async (req, res) => {
     while (!isBefore(endDate, currentDate)) {
       dailyRecords.push({
         budget_id: newBudget._id,
-        date: currentDate,
+        date: startOfDayVN(currentDate),
         quota: daily_quota,
         remaining: daily_quota,
       });

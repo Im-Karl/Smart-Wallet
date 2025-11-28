@@ -25,6 +25,7 @@ const dailyReportJob = async () => {
 
             if(!budget || !user) continue;
 
+            if (new Date(budget.end_date) < new Date()) continue;
 
             const htmlContent = generateReportHtml(record, budget, user);
             const subject = `Báo cáo chi tiêu ngày ${yesterday.toLocaleDateString('vi-VN')} - ${budget.name}`;
@@ -58,6 +59,8 @@ const dailyReminderJob = async () => {
 
 
             if(!budget || !user) continue;
+
+            if (new Date(budget.end_date) < new Date()) continue;
 
             const subject = `⚠️ Nhắc Nhở: Bạn chưa ghi nhận chi tiêu hôm nay!`;
             const htmlContent = `
@@ -121,7 +124,7 @@ exports.startCronJobs = () => {
     }); 
 
     // 2. Job 20:00: Gửi email nhắc nhở nếu chưa ghi chi tiêu
-    cron.schedule('0 0 20 * * *', dailyReminderJob, {
+    cron.schedule('0 0 21 * * *', dailyReminderJob, {
         timezone: "Asia/Ho_Chi_Minh" 
     });
 
