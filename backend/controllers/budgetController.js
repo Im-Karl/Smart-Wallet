@@ -1,17 +1,11 @@
 const Budget = require("../models/Budget");
 const mongoose = require("mongoose");
 const DailyRecord = require("../models/DailyRecord");
-const { isBefore, differenceInDays, addDays, startOfDay } = require("date-fns");
+const { isBefore, differenceInDays, addDays } = require("date-fns");
+const { startOfDayVN } = require("../utils/time");
 
 const toVNDate = (date) => {
   return new Date(date.getTime() + 7 * 60 * 60 * 1000);
-};
-
-const startOfDayVN = (date) => {
-  const vn = toVNDate(date);
-  return new Date(
-    Date.UTC(vn.getUTCFullYear(), vn.getUTCMonth(), vn.getUTCDate())
-  );
 };
 
 const calculateTotalDays = (start, end) => {
@@ -20,65 +14,43 @@ const calculateTotalDays = (start, end) => {
 
 exports.getBudgets = async (req, res) => {
   const user_id = req.user._id;
-  const today = startOfDayVN(new Date());
+  const today = startOfDayVN();
+  const skip = parseInt(req.query.skip || "0");
+  const limit = parseInt(req.query.limit || "5");
 
   try {
-    const budgets = await Budget.aggregate([
-      { $match: { user_id: new mongoose.Types.ObjectId(user_id) } },
+    const budgetsPage = await Budget.find({ user_id })
+      .sort({ start_date: -1, end_date: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-      {
-        $lookup: {
-          from: "dailyrecords",
-          localField: "_id",
-          foreignField: "budget_id",
-          as: "daily_records",
-        },
-      },
+    const budgetsWithDaily = await Promise.all(
+      budgetsPage.map(async (budget) => {
+        const daily_records = await DailyRecord.find({
+          budget_id: budget._id,
+        }).lean();
 
-      {
-        $addFields: {
-          net_remaining_current: {
-            $sum: {
-              $map: {
-                input: "$daily_records",
-                as: "record",
-                in: {
-                  $cond: [
-                    // Chỉ tính tổng các DailyRecord CÓ NGÀY <= HÔM NAY
-                    { $lte: ["$$record.date", today] },
-                    "$$record.remaining",
-                    0,
-                  ],
-                },
-              },
-            },
-          },
-          // (Tùy chọn) Tính tổng số ngày đã qua:
-          days_passed: {
-            $size: {
-              $filter: {
-                input: "$daily_records",
-                as: "record",
-                cond: { $lte: ["$$record.date", today] },
-              },
-            },
-          },
-        },
-      },
+        const net_remaining_current = daily_records
+          .filter((r) => r.date <= today)
+          .reduce((sum, r) => sum + r.remaining, 0);
 
-      {
-        $project: {
-          daily_records: 0,
-        },
-      },
-    ]);
+        const days_passed = daily_records.filter((r) => r.date <= today).length;
 
-    res.json(budgets);
+        return {
+          ...budget,
+          net_remaining_current,
+          days_passed,
+        };
+      })
+    );
+
+    const total = await Budget.countDocuments({ user_id });
+
+    res.json({ budgets: budgetsWithDaily, total });
   } catch (error) {
-    console.log("Error fetching budgets with summary:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching budget data", error: error.message });
+    console.error(error);
+    res.status(500).json({ message: "Error fetching budgets" });
   }
 };
 
@@ -87,29 +59,20 @@ exports.getDailyRecord = async (req, res) => {
 
   const targetDate = startOfDayVN(new Date(date));
 
-  try {
-    const record = await DailyRecord.findOne({
-      budget_id,
-      date: targetDate,
-    });
+  const record = await DailyRecord.findOne({
+    budget_id,
+    date: targetDate,
+  });
 
-    if (!record) {
-      return res
-        .status(404)
-        .json({ message: "Daily record not found for this date." });
-    }
+  if (!record)
+    return res.status(404).json({ message: "Daily record không tồn tại." });
 
-    const budget = await Budget.findById(budget_id);
-    if (!budget || budget.user_id.toString() !== req.user._id.toString()) {
-      return res.status(4003).json({ message: "Access denied." });
-    }
-
-    res.json(record);
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error fetching daily record", error: error.message });
+  const budget = await Budget.findById(budget_id);
+  if (!budget || budget.user_id.toString() !== req.user._id.toString()) {
+    return res.status(403).json({ message: "Access denied." });
   }
+
+  res.json(record);
 };
 
 exports.createBudget = async (req, res) => {
@@ -119,51 +82,75 @@ exports.createBudget = async (req, res) => {
   const startDate = startOfDayVN(new Date(start_date));
   const endDate = startOfDayVN(new Date(end_date));
 
-  if (isBefore(endDate, startDate)) {
+  if (endDate < startDate)
     return res
       .status(400)
       .json({ message: "End date must be after start date" });
-  }
 
-  const total_days = calculateTotalDays(startDate, endDate);
+  const total_days = differenceInDays(endDate, startDate) + 1;
   const daily_quota = total_amount / total_days;
 
+  const newBudget = new Budget({
+    name,
+    user_id,
+    start_date: startDate,
+    end_date: endDate,
+    total_amount,
+    daily_quota,
+    net_remaining: total_amount,
+  });
+
+  await newBudget.save();
+
+  const dailyRecords = [];
+  let current = startDate;
+
+  while (current <= endDate) {
+    dailyRecords.push({
+      budget_id: newBudget._id,
+      date: startOfDayVN(current),
+      quota: daily_quota,
+      remaining: daily_quota,
+    });
+
+    current = addDays(current, 1);
+  }
+
+  await DailyRecord.insertMany(dailyRecords);
+
+  res.status(201).json({
+    budget: newBudget,
+    message: "Budget created successfully.",
+  });
+};
+
+exports.getDailyRecordHistory = async (req, res) => {
+  const { id: budget_id } = req.params;
+  const skip = parseInt(req.query.skip || "0");
+  const limit = parseInt(req.query.limit || "20");
+
   try {
-    const newBudget = new Budget({
-      name,
-      user_id,
-      start_date: startDate,
-      end_date: endDate,
-      total_amount,
-      daily_quota,
-      net_remaining: total_amount,
-    });
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    await newBudget.save();
+    const records = await DailyRecord.find({ budget_id, date: { $lte: today } })
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    let currentDate = startDate;
-    const dailyRecords = [];
+    return res.json(records);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
 
-    while (!isBefore(endDate, currentDate)) {
-      dailyRecords.push({
-        budget_id: newBudget._id,
-        date: startOfDayVN(currentDate),
-        quota: daily_quota,
-        remaining: daily_quota,
-      });
-      currentDate = addDays(currentDate, 1);
-    }
-
-    await DailyRecord.insertMany(dailyRecords);
-
-    res.status(201).json({
-      budget: newBudget,
-      message: `Created budget and ${dailyRecords.length} daily records.`,
-    });
-  } catch (error) {
-    console.log(error);
-    res
-      .status(500)
-      .json({ message: "Error creating budget", error: error.message });
+exports.getBudgetById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const budget = await Budget.findById(id);
+    if (!budget) return res.status(404).json({ message: "Budget not found" });
+    res.json(budget);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };

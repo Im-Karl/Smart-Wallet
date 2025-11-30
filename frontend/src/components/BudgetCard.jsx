@@ -1,15 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { differenceInDays, isAfter } from 'date-fns';
-import { Clock, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, DollarSign, Minus } from 'lucide-react';
+import { formatCurrency } from '../utils/formatMoney';
 
-const formatCurrency = (amount) => {
-  if (typeof amount !== 'number') return 'N/A';
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount);
-};
 
 const BudgetCard = ({ budget }) => {
   const {
@@ -21,16 +15,14 @@ const BudgetCard = ({ budget }) => {
     daily_quota,
     total_spent,
     net_remaining_current,
-    days_passed, // Số ngày đã qua (từ aggregate)
+    days_passed,
   } = budget;
 
-  // Xử lý ngày tháng
   const startDate = new Date(start_date);
   const endDate = new Date(end_date);
   const totalDays = differenceInDays(endDate, startDate) + 1;
   const isFinished = isAfter(new Date(), endDate);
   
-  // Tính toán tiến độ
   const progressPercent = (days_passed / totalDays) * 100;
   const netRemainingPercent = (net_remaining_current / total_amount) * 100;
   
@@ -64,7 +56,13 @@ const BudgetCard = ({ budget }) => {
           </div>
         </div>
         <div className="flex items-center">
-          <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
+          {net_remaining_current > 0 ? (
+             <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
+           ) : net_remaining_current < 0 ? (
+             <TrendingDown className="w-5 h-5 text-red-500 mr-2" />
+           ) : (
+              <Minus className="w-5 h-5 text-gray-400 mr-2" />  // optional
+           )}
           <div>
             <p className="text-sm text-gray-500">Còn Lại (Hiện tại)</p>
             <p className={`font-bold text-xl ${remainingColor}`}>
@@ -91,8 +89,17 @@ const BudgetCard = ({ budget }) => {
       {/* Chi tiết thêm */}
       <div className="flex justify-between text-sm text-gray-600">
         <div className="flex items-center">
-          <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
-          <span>Chi tiêu thực tế: <span className="font-bold">{formatCurrency(total_spent)}</span></span>
+          {total_spent < total_amount ? (
+            <TrendingUp className="w-5 h-5 text-green-500 mr-2" />
+          ) : total_spent > total_amount ? (
+            <TrendingDown className="w-5 h-5 text-red-500 mr-2" />
+          ) : (
+            <Minus className="w-5 h-5 text-gray-400 mr-2" /> 
+          )}
+
+          <span>
+            Chi tiêu thực tế: <span className="font-bold">{formatCurrency(total_spent)}</span>
+          </span>
         </div>
         <div className="flex items-center">
           <Clock className="w-4 h-4 text-gray-500 mr-1" />

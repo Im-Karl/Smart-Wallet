@@ -1,18 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../api/apiClient';
-import { format } from 'date-fns'; 
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { apiClient } from "../api/apiClient";
 
-const fetchDailyRecord = ({ queryKey }) => {
-  const [, budgetId, date] = queryKey;
-  const formattedDate = format(date, 'yyyy-MM-dd'); 
-  return apiClient.get(`/budgets/${budgetId}/daily/${formattedDate}`);
-};
-
-export const useDailyRecord = (budgetId, date) => {
-  return useQuery({
-    queryKey: ['dailyRecord', budgetId, date], // Key động theo ID và Ngày
-    queryFn: fetchDailyRecord,
-    enabled: !!budgetId && !!date, 
-    select: (response) => response.data,
+export const useHistoryRecords = (budgetId) => {
+  return useInfiniteQuery({
+    queryKey: ["historyRecords", budgetId],
+    queryFn: async ({ pageParam = 0 }) => {
+      const res = await apiClient.get(
+        `/budgets/${budgetId}/history?skip=${pageParam}&limit=20`
+      );
+      return res.data;
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < 20) return undefined; 
+      return allPages.length * 20; 
+    },
+    enabled: !!budgetId,
   });
 };

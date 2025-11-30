@@ -106,8 +106,8 @@ const AddTransactionForm = ({ budgetId }) => {
 
         {/* Thông báo lỗi */}
         {addTransactionMutation.isError && (
-            <p className="text-red-500 text-center mt-3 text-sm">
-                Lỗi: {addTransactionMutation.error.response?.data?.message || 'Không thể thêm giao dịch.'}
+            <p className="text-red-500 text-center mt-3 text-sm font-bold">
+                 {addTransactionMutation.error.response?.data?.message || 'Không thể thêm giao dịch.'}
             </p>
         )}
       </form>

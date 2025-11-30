@@ -1,67 +1,46 @@
 const DailyRecord = require("../models/DailyRecord");
 const Budget = require("../models/Budget");
-const { startOfDay, addDays } = require("date-fns");
+const {  addDays } = require("date-fns");
+const { startOfDayVN, toVNDate } = require("../utils/time");
 const { default: mongoose } = require("mongoose");
+
+
 
 exports.addTransaction = async (req, res) => {
   const { budget_id } = req.params;
   const { amount, description, category } = req.body;
 
-  const today = new Date();
-  const start = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate()
-  );
-  const end = new Date(
-    today.getFullYear(),
-    today.getMonth(),
-    today.getDate() + 1
-  );
+  const start = startOfDayVN();
+  const end = addDays(start, 1);
 
-  if (amount === 0) {
-    return res
-      .status(400)
-      .json({ message: "Transaction amount cannot be zero" });
+  const dailyRecord = await DailyRecord.findOne({
+    budget_id,
+    date: { $gte: start, $lt: end },
+  });
+
+  if (!dailyRecord) {
+    return res.status(404).json({
+      message: "Quỹ đã kết thúc hoặc không tồn tại ngày hôm nay.",
+    });
   }
 
-  try {
-    const dailyRecord = await DailyRecord.findOne({
-      budget_id,
-      date: { $gte: start, $lt: end },
-    });
+  dailyRecord.transactions.push({
+    amount,
+    description,
+    category,
+    created_at: toVNDate(),
+  });
 
-    if (!dailyRecord) {
-      return res
-        .status(404)
-        .json({ message: "Daily record for today not found for this budget." });
-    }
+  if (amount < 0) dailyRecord.spent += Math.abs(amount);
+  else dailyRecord.added_money += amount;
 
-    dailyRecord.transactions.push({ amount, description, category });
+  dailyRecord.remaining =
+    dailyRecord.quota + dailyRecord.added_money - dailyRecord.spent;
 
-    if (amount < 0) {
-      dailyRecord.spent += Math.abs(amount); // amount âm -> tăng spent
-    } else {
-      dailyRecord.added_money += amount; // amount dương -> tăng added_money
-    }
+  await dailyRecord.save();
+  await updateBudgetSummary(budget_id);
 
-    dailyRecord.remaining =
-      dailyRecord.quota + dailyRecord.added_money - dailyRecord.spent;
-
-    await dailyRecord.save();
-
-    await updateBudgetSummary(budget_id);
-
-    res.status(201).json({
-      message: "Transaction added and Daily Record updated.",
-      dailyRecord,
-    });
-  } catch (error) {
-    console.log(error);
-    res
-      .status(500)
-      .json({ message: "Error adding transaction", error: error.message });
-  }
+  res.status(201).json({ message: "Transaction added", dailyRecord });
 };
 
 const updateBudgetSummary = async (budget_id) => {

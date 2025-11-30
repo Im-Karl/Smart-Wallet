@@ -1,22 +1,30 @@
-import { useQuery } from '@tanstack/react-query';
-import { createBudgetApi, fetchBudgets } from '../api/apiClient'; 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { createBudgetApi, fetchBudgets } from "../api/apiClient";
 
 export const useBudgets = () => {
-  return useQuery({
-    queryKey: ['budgets'],
-    queryFn: fetchBudgets,
-    select: (response) => response.data,
+  const limit = 5;
+
+  return useInfiniteQuery({
+    queryKey: ["budgets"],
+    queryFn: async ({ pageParam = 0 }) => {
+      const skip = pageParam * limit;
+      const res = await fetchBudgets({ skip, limit });
+      return res.data; // { budgets: [...], total: number }
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedItems = allPages.flatMap(page => page.budgets).length;
+      return loadedItems < lastPage.total ? allPages.length : undefined;
+    },
   });
 };
 
 export const useCreateBudget = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data) => createBudgetApi(data),
     onSuccess: () => {
-      // ⚠️ Rất quan trọng: Báo cho React Query biết data ['budgets'] đã cũ
-      queryClient.invalidateQueries({ queryKey: ['budgets'] }); 
+      queryClient.invalidateQueries({ queryKey: ["budgets"] });  
     },
   });
 };

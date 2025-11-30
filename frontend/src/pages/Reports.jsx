@@ -1,19 +1,11 @@
-// src/pages/Reports.jsx (Cập nhật để dùng data thật)
 
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useCategoryStats, useMonthlyFlow } from '../hooks/useStats'; // Import hooks mới
 import { Loader2, ChartSpline } from 'lucide-react';
-
+import { formatCurrency } from '../utils/formatMoney';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A1054C', '#8884d8', '#D35400'];
 
-const formatCurrency = (amount) => {
-    if (typeof amount !== 'number') return 'N/A';
-    return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-    }).format(amount);
-};
 
 const Reports = () => {
     const { data: categoryStats, isLoading: isLoadingCats, isError: isErrorCats } = useCategoryStats();
