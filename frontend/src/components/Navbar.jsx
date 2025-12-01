@@ -15,12 +15,10 @@ const Navbar = () => {
   return (
     <header className="bg-white shadow-md sticky top-0 z-10">
       <nav className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-        {/* Logo/Tên Ứng Dụng */}
         <Link to="/" className="text-2xl font-bold text-indigo-600 hover:text-indigo-800 transition duration-150">
           💰 Budget Smart
         </Link>
 
-        {/* Các Liên Kết Điều Hướng Chính */}
         <div className="flex items-center space-x-6">
           <Link to="/" className="text-gray-600 hover:text-indigo-600 font-medium flex items-center">
             <LayoutDashboard className="w-5 h-5 mr-1" />
@@ -32,7 +30,6 @@ const Navbar = () => {
           </Link>
         </div>
 
-        {/* Thông tin User và Đăng Xuất */}
         <div className="flex items-center space-x-4">
           <span className="text-sm text-gray-700 hidden sm:block">
             Xin chào, <span className="font-bold">{user?.email}</span>

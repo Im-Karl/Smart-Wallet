@@ -1,13 +1,15 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { apiClient } from "../api/apiClient";
+import { apiClient, fetchHistoryRecords } from "../api/apiClient";
 
 export const useHistoryRecords = (budgetId) => {
   return useInfiniteQuery({
     queryKey: ["historyRecords", budgetId],
     queryFn: async ({ pageParam = 0 }) => {
-      const res = await apiClient.get(
-        `/budgets/${budgetId}/history?skip=${pageParam}&limit=20`
-      );
+      const res = await fetchHistoryRecords({
+        budgetId,
+        skip: pageParam,
+        limit: 20,
+      });
       return res.data;
     },
     getNextPageParam: (lastPage, allPages) => {

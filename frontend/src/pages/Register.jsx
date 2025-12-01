@@ -46,7 +46,6 @@ const Register = () => {
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
         </div>
         
-        {/* Password Field */}
         <div className="mb-4">
           <input
             type="password"
@@ -63,7 +62,6 @@ const Register = () => {
           {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>}
         </div>
 
-        {/* Confirm Password Field */}
         <div className="mb-6">
           <input
             type="password"
@@ -77,7 +75,6 @@ const Register = () => {
           {errors.passwordConfirm && <p className="text-red-500 text-sm mt-1">{errors.passwordConfirm.message}</p>}
         </div>
 
-        {/* Nút Đăng ký */}
         <button
           type="submit"
           disabled={registerMutation.isPending}
@@ -86,12 +83,10 @@ const Register = () => {
           {registerMutation.isPending ? 'Đang Đăng Ký...' : 'Đăng Ký'}
         </button>
         
-        {/* Link chuyển sang Đăng nhập */}
         <p className="mt-4 text-center text-sm text-gray-600">
           Đã có tài khoản? <Link to="/login" className="text-indigo-600 hover:text-indigo-800 font-medium">Đăng nhập</Link>
         </p>
 
-        {/* Hiển thị lỗi từ API */}
         {registerMutation.isError && (
             <p className="text-red-500 text-center mt-3 text-sm">
                 Lỗi: {registerMutation.error.response?.data?.message || registerMutation.error.message}

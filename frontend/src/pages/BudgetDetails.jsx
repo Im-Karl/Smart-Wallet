@@ -1,23 +1,15 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
 import { useDailyRecordsList } from '../hooks/useHistoryRecords';
-import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '../api/apiClient';
 import AddTransactionForm from '../components/AddTransactionForm';
 import { format, parseISO } from 'date-fns';
 import { formatCurrency } from '../utils/formatMoney';
+import { useBudgetDetail } from '../hooks/useBudget';
 
 const BudgetDetails = () => {
   const { id: budgetId } = useParams();
 
-  const { data: budget } = useQuery({
-  queryKey: ['budgetDetail', budgetId],
-  queryFn: async () => {
-    const res = await apiClient.get(`/budgets/${budgetId}`);
-    return res.data;
-  },
-  enabled: !!budgetId,
-});
+  const { data: budget } = useBudgetDetail(budgetId);
 
   const { 
     data, 
@@ -38,8 +30,8 @@ console.log(budgetId);
           <h2 className="text-2xl font-semibold text-gray-800">{budget.name}</h2>
           <p className="text-gray-600 font-bold">
             Thời gian:{" "}
-            <b>{format(parseISO(budget.start_date), 'yyyy-MM-dd')}</b> -{" "}
-            <b>{format(parseISO(budget.end_date), 'yyyy-MM-dd')}</b>
+            <b>{format(parseISO(budget.start_date), 'dd-MM-yyyy')}</b> -{" "}
+            <b>{format(parseISO(budget.end_date), 'dd-MM-yyyy')}</b>
           </p>
           <p className="text-gray-600 font-bold">
             Tổng ngân sách: <b>{formatCurrency(Math.round(budget.total_amount))}</b>
@@ -54,10 +46,10 @@ console.log(budgetId);
           {records.map(rec => (
             <div key={rec._id} className="border-b pb-4">
               <h2 className="text-xl font-semibold">
-                Ngày: {format(parseISO(rec.date), 'yyyy-MM-dd')}
+                Ngày: {format(parseISO(rec.date), 'dd-MM-yyyy')}
               </h2>
 
-              <p>Quota: <b>{formatCurrency(Math.round(rec.quota))} </b></p>
+              <p>Giới hạn chi tiêu hàng ngày: <b>{formatCurrency(Math.round(rec.quota))} </b></p>
 
               <p>
                 Chi tiêu thực tế: <b>{formatCurrency(Math.round(rec.spent - (rec.added_money || 0)))} </b>

@@ -44,50 +44,72 @@ exports.getCategoryStats = async (req,res) => {
 };
 
 
-exports.getMonthlyFlow = async (req,res) => {
+exports.getMonthlyFlow = async (req, res) => {
     const user_id = req.user._id;
 
     try {
         const budgetIds = await getUserBudgetIds(user_id);
 
-        if(budgetIds.length === 0){
+        if (budgetIds.length === 0) {
             return res.json([]);
         }
 
         const flowData = await DailyRecord.aggregate([
             { $match: { budget_id: { $in: budgetIds } } },
 
+            { $unwind: "$transactions" },
+
             {
                 $group: {
                     _id: {
-                        year: { $year: "$date" },
-                        month: { $month: "$date" },
+                        year: { $year: "$transactions.created_at" },
+                        month: { $month: "$transactions.created_at" },
                     },
-                    totalSpent: { $sum: "$spent" }, // $spent là tổng chi tiêu (giá trị dương)
-                    totalAdded: { $sum: "$added_money" }, // $added_money là tổng tiền thêm (giá trị dương)
-                },
+
+                    totalSpent: {
+                        $sum: {
+                            $cond: [
+                                { $lt: ["$transactions.amount", 0] },
+                                { $abs: "$transactions.amount" },
+                                0
+                            ]
+                        }
+                    },
+
+                    totalAdded: {
+                        $sum: {
+                            $cond: [
+                                { $gt: ["$transactions.amount", 0] },
+                                "$transactions.amount",
+                                0
+                            ]
+                        }
+                    }
+                }
             },
 
             { $sort: { "_id.year": 1, "_id.month": 1 } },
 
             {
                 $project: {
-                    _id: 0, // Ẩn _id
-                    dateLabel: { 
+                    _id: 0,
+                    dateLabel: {
                         $concat: [
-                            { $toString: "$_id.month" }, "/", { $toString: "$_id.year" }
+                            { $toString: "$_id.month" }, "/",
+                            { $toString: "$_id.year" }
                         ]
                     },
                     month: "$_id.month",
                     year: "$_id.year",
                     spent: "$totalSpent",
                     added: "$totalAdded",
-                    netFlow: { $subtract: ["$totalAdded", "$totalSpent"] } // Thu nhập - Chi tiêu
+                    netFlow: { $subtract: ["$totalAdded", "$totalSpent"] }
                 }
             }
         ]);
 
-        res.json(flowData)
+        res.json(flowData);
+
     } catch (error) {
         console.error("Lỗi thống kê dòng tiền:", error);
         res.status(500).json({ message: "Lỗi Server khi lấy thống kê dòng tiền" });

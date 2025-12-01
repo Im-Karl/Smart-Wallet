@@ -19,7 +19,6 @@ const Login = () => {
         <div className='flex justify-center items-center min-h-screen bg-gray-100'>
             <form onSubmit={handleSubmit(onSubmit)} className='bg-white p-8 rounded-lg w-full max-w-sm'>
                 <h2 className="text-2xl font-bold mb-6 text-center text-indigo-600">Đăng Nhập</h2>
-        {/* Field Email */}
         <div className="mb-4">
           <input
             type="email"
@@ -29,7 +28,6 @@ const Login = () => {
           />
           {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>}
         </div>
-        {/* Field Password */}
         <div className="mb-6">
           <input
             type="password"

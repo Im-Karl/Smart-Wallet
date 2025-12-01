@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { useCategoryStats, useMonthlyFlow } from '../hooks/useStats'; // Import hooks mới
+import { useCategoryStats, useMonthlyFlow } from '../hooks/useStats'; 
 import { Loader2, ChartSpline } from 'lucide-react';
 import { formatCurrency } from '../utils/formatMoney';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#A1054C', '#8884d8', '#D35400'];
@@ -15,13 +15,11 @@ const Reports = () => {
         return <div className="text-center p-10"><Loader2 className="w-8 h-8 animate-spin mx-auto text-indigo-600" /> Đang tải dữ liệu báo cáo...</div>;
     }
 
-    // Định dạng dữ liệu cho Pie Chart
     const pieData = categoryStats?.map(item => ({
         name: item._id || 'Không phân loại',
         value: item.totalSpent
     })) || [];
     
-    // Định dạng dữ liệu cho Bar Chart
     const barData = monthlyFlow || [];
 
     return (
@@ -30,7 +28,6 @@ const Reports = () => {
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
-                {/* 1. Phân tích chi tiêu theo Danh mục (Biểu đồ tròn) */}
                 <div className="lg:col-span-1 bg-white p-6 rounded-xl shadow-lg">
                     <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Chi Tiêu Theo Danh Mục</h2>
                     {isErrorCats && <p className='text-red-500'>Lỗi khi tải dữ liệu danh mục.</p>}
@@ -61,7 +58,6 @@ const Reports = () => {
                     )}
                 </div>
                 
-                {/* 2. Báo cáo Dòng tiền hàng tháng (Biểu đồ cột) */}
                 <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-lg">
                     <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">Dòng Tiền Thu Chi Theo Tháng</h2>
                     {isErrorFlow && <p className='text-red-500'>Lỗi khi tải dữ liệu dòng tiền.</p>}
@@ -71,7 +67,7 @@ const Reports = () => {
                             <BarChart data={barData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="dateLabel" />
-                                <YAxis tickFormatter={formatCurrency} />
+                                <YAxis tickFormatter={formatCurrency} width={100}/>
                                 <Tooltip formatter={(value) => formatCurrency(value)} />
                                 <Legend />
                                 <Bar dataKey="spent" name="Chi Tiêu" fill="#EF4444" />
