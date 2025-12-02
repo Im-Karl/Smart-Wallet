@@ -14,7 +14,9 @@ const statRoutes = require('./routes/statRoutes');
 
 app.use(express.json());
 
-app.use(cors());
+app.use(cors({
+  origin: "*"
+}));
 
 app.use('/api/auth', authRoutes); 
 app.use('/api/budgets', budgetRoutes);
